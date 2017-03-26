@@ -1,7 +1,15 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(zbar_ros)
 
-find_package(catkin REQUIRED COMPONENTS roscpp cv_bridge nodelet roslint)
+find_package(catkin REQUIRED COMPONENTS roscpp cv_bridge nodelet roslint std_msgs message_generation)
+
+add_message_files(
+  FILES Barcode.msg Barcodes.msg
+)
+
+generate_messages (
+  DEPENDENCIES std_msgs
+)
 
 catkin_package(
   INCLUDE_DIRS include

@@ -31,7 +31,14 @@
 
 #include "zbar_ros/barcode_reader_nodelet.h"
 #include "pluginlib/class_list_macros.h"
+
 #include "std_msgs/String.h"
+#include "std_msgs/Int64.h"
+#include "std_msgs/Int8.h"
+#include "zbar_ros/Barcode.h"
+#include "zbar_ros/Barcodes.h"
+
+
 
 namespace zbar_ros
 {
@@ -46,7 +53,7 @@ namespace zbar_ros
     nh_ = getNodeHandle();
     private_nh_ = getPrivateNodeHandle();
 
-    barcode_pub_ = nh_.advertise<std_msgs::String>("barcode", 10,
+    barcode_pub_ = nh_.advertise<zbar_ros::Barcodes>("barcode", 10,
         boost::bind(&BarcodeReaderNodelet::connectCb, this),
         boost::bind(&BarcodeReaderNodelet::disconnectCb, this));
     
@@ -83,11 +90,26 @@ namespace zbar_ros
         cv_image->image.cols * cv_image->image.rows);
     scanner_.scan(zbar_image);
 
+
+    //initialize barcodes here
+    //create an array or maybe check if pushing to barcodes is possible
+    //at the begining of the loop, initialize barcode
+    //assign all those that need assigning
+    //at the end of the loop, push into an array or barcodes
+    //after loop finishes, publish barcodes
+
+    zbar_ros::Barcodes barcodes_msg;
+    barcodes_msg.header.stamp = ros::Time::now();
+
     // iterate over all barcode readings from image
     for (zbar::Image::SymbolIterator symbol = zbar_image.symbol_begin();
          symbol != zbar_image.symbol_end(); ++symbol)
     {
       std::string barcode = symbol->get_data();
+      int x = symbol->get_location_x(0);
+      int y = symbol->get_location_y(0);
+      int sz = symbol->get_location_size(); 
+
       // verify if repeated barcode throttling is enabled
       if (throttle_ > 0.0)
       {
@@ -111,10 +133,19 @@ namespace zbar_ros
       }
 
       // publish barcode
-      std_msgs::String barcode_string;
-      barcode_string.data = barcode;
-      barcode_pub_.publish(barcode_string);
+      //std_msgs::String barcode_string;
+      //barcode_string.data = barcode;
+      
+      zbar_ros::Barcode barcode_msg;
+      barcode_msg.barcode_string = barcode;
+      barcode_msg.x = (int)x;
+      barcode_msg.y = (int)y;
+      barcode_msg.area = (int)sz;
+      barcodes_msg.barcodes.push_back(barcode_msg);
+      //barcode_pub_.publish(barcode_string);
     }
+    barcodes_msg.barcode_count = barcodes_msg.barcodes.size();
+    barcode_pub_.publish(barcodes_msg);
   }
 
   void BarcodeReaderNodelet::cleanCb()
